@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	ie2datatypes "github.com/insightengine2/ie2-datatypes/types"
+	ie2datatypes "github.com/insightengine2/ie2-utilities/types"
 	"gopkg.in/yaml.v3"
 )
 

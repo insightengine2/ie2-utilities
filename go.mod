@@ -1,4 +1,4 @@
-module github.com/insightengine2/ie2-datatypes
+module github.com/insightengine2/ie2-utilities
 
 go 1.21.4
 
