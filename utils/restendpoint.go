@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	api "github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
+	api "github.com/aws/aws-sdk-go-v2/service/apigateway"
 	ie2datatypes "github.com/insightengine2/ie2-utilities/types"
 )
 
@@ -36,10 +36,27 @@ func AWSRESTEndpointExists(conf *aws.Config, ctx *context.Context, input *ie2dat
 
 	log.Printf("Checking if endpoint exists using route %s and apiid %s", input.Route, input.ApiId)
 
-	_, err := c.GetRoute(*ctx, &api.GetRouteInput{
-		ApiId:   aws.String(input.ApiId),
-		RouteId: aws.String(input.Route),
+	out, err := c.GetRestApi(*ctx, &api.GetRestApiInput{
+		RestApiId: aws.String(input.ApiId),
 	})
+
+	if err != nil {
+		return false, err
+	}
+
+	log.Printf("API %s exists...", input.ApiId)
+
+	/*
+		c.GetResource(*ctx, &api.GetResourceInput{
+			ResourceId: input.,
+		})
+
+
+		_, err := c.GetRoute(*ctx, &api.GetRouteInput{
+			ApiId:   aws.String(input.ApiId),
+			RouteId: aws.String(input.Route),
+		})
+	*/
 
 	if err != nil {
 		return false, err
