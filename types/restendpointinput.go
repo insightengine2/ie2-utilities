@@ -1,5 +1,9 @@
 package ie2datatypes
 
+type LambdaIntegration struct {
+	LambdaName string
+}
+
 type RESTMethod struct {
 	Name      string
 	ReqModel  map[string]string
@@ -7,9 +11,10 @@ type RESTMethod struct {
 }
 
 type RESTEndpointInput struct {
-	ApiId    string
-	Resource string
-	Route    string
-	Stage    string
-	Methods  []RESTMethod
+	ApiId       string
+	ResourceId  string
+	Route       string
+	Stage       string
+	Integration *LambdaIntegration
+	Methods     []RESTMethod
 }
