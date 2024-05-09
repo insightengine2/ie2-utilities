@@ -245,12 +245,15 @@ func AWSGetRESTResourceIdFromName(conf *aws.Config, ctx *context.Context, apiid 
 
 	for _, item := range out.Items {
 
-		log.Printf("Looking for a path part named %s in resource %s", name, *item.PathPart)
+		if item.PathPart != nil {
 
-		if *item.PathPart == name {
-			log.Printf("Success! Found a resource with a path part named %s", name)
-			id = *item.Id
-			break
+			log.Printf("Looking for a path part named %s in resource %s", name, *item.PathPart)
+
+			if *item.PathPart == name {
+				log.Printf("Success! Found a resource with a path part named %s", name)
+				id = *item.Id
+				break
+			}
 		}
 	}
 
