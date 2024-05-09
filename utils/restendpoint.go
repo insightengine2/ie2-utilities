@@ -210,9 +210,14 @@ func AWSGetRESTApiIdFromName(conf *aws.Config, ctx *context.Context, name string
 	return id, nil
 }
 
-func AWSGetRESTResourceIdFromName(conf *aws.Config, ctx *context.Context, name string) (string, error) {
+func AWSGetRESTResourceIdFromName(conf *aws.Config, ctx *context.Context, apiid string, name string) (string, error) {
 
 	id := ""
+
+	if len(apiid) <= 0 {
+		log.Printf("ApiId value is empty!")
+		return id, errors.New("apiid value is empty")
+	}
 
 	if len(name) <= 0 {
 		log.Print("Resource name is empty!")
@@ -230,13 +235,14 @@ func AWSGetRESTResourceIdFromName(conf *aws.Config, ctx *context.Context, name s
 	name = strings.ToLower(name)
 	c := api.NewFromConfig(*conf)
 
-	out, e := c.GetResources(*ctx, &api.GetResourcesInput{})
+	out, e := c.GetResources(*ctx, &api.GetResourcesInput{RestApiId: aws.String(apiid)})
 
 	if e != nil {
 		return id, e
 	}
 
 	log.Printf("Looking for a resource with a path part named %s", name)
+
 	for _, item := range out.Items {
 
 		log.Printf("Looking for a path part named %s in resource %s", name, *item.PathPart)
