@@ -13,33 +13,220 @@ import (
 	ie2datatypes "github.com/insightengine2/ie2-utilities/types"
 )
 
-func AWSRESTEndpointExists(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) (bool, error) {
+/***
+* Internal Functions
+***/
+func createApiGatewayClient(conf *aws.Config, ctx *context.Context) (*api.Client, error) {
 
 	if conf == nil {
-		e := errors.New("aws.config param can not be empty")
-		return false, e
+		e := errors.New("aws.config param can not be null")
+		return nil, e
 	}
 
 	if ctx == nil {
-		e := errors.New("context param can not be empty")
-		return false, e
-	}
-
-	if input == nil {
-		e := errors.New("input param can not be empty")
-		return false, e
+		e := errors.New("context param can not be null")
+		return nil, e
 	}
 
 	c := api.NewFromConfig(*conf)
 
 	if c == nil {
 		e := errors.New("failed to create apigatewayv2 client using provided config")
+		return nil, e
+	}
+
+	return c, nil
+}
+
+func lambdaIntegrationExists(client *api.Client, ctx *context.Context, apiid string, resourceid string, in *ie2datatypes.RESTMethod) (bool, error) {
+
+	if client == nil {
+		return false, errors.New("client is null")
+	}
+
+	if ctx == nil {
+		return false, errors.New("context is null")
+	}
+
+	if in == nil {
+		return false, errors.New("input RESTMethod object is empty")
+	}
+
+	out, e := client.GetIntegration(*ctx, &api.GetIntegrationInput{
+		HttpMethod: aws.String(in.Name),
+		ResourceId: aws.String(resourceid),
+		RestApiId:  aws.String(apiid),
+	})
+
+	if e != nil {
 		return false, e
 	}
 
-	log.Printf("Checking if endpoint exists using route %s and apiid %s", input.Route, input.ApiId)
+	if out != nil {
+		return true, nil
+	}
 
-	_, err := c.GetRestApi(*ctx, &api.GetRestApiInput{
+	return false, nil
+}
+
+func createLambdaIntegration(client *api.Client, ctx *context.Context, apiid string, resourceid string, uri string, in *ie2datatypes.RESTMethod) error {
+
+	if client == nil {
+		return errors.New("client is null")
+	}
+
+	if ctx == nil {
+		return errors.New("context is null")
+	}
+
+	if in == nil {
+		return errors.New("input RESTMethod object is null")
+	}
+
+	_, e := client.PutIntegration(*ctx, &api.PutIntegrationInput{
+		HttpMethod:            aws.String(in.Name),
+		IntegrationHttpMethod: aws.String("POST"),
+		ResourceId:            aws.String(resourceid),
+		RestApiId:             aws.String(apiid),
+		Type:                  types.IntegrationTypeAwsProxy,
+		PassthroughBehavior:   aws.String("WHEN_NO_MATCH"),
+		Uri:                   aws.String(uri),
+		RequestParameters:     in.ReqParams,
+	})
+
+	return e
+}
+
+func deleteLambdaIntegration(client *api.Client, ctx *context.Context, apiid string, resourceid string, in *ie2datatypes.RESTMethod) error {
+
+	if client == nil {
+		return errors.New("client is null")
+	}
+
+	if ctx == nil {
+		return errors.New("context is null")
+	}
+
+	if in == nil {
+		return errors.New("input RESTMethod object is null")
+	}
+
+	_, e := client.DeleteIntegration(*ctx, &api.DeleteIntegrationInput{
+		HttpMethod: aws.String(in.Name),
+		ResourceId: aws.String(resourceid),
+		RestApiId:  aws.String(apiid),
+	})
+
+	return e
+}
+
+func updateLambdaIntegration(client *api.Client, ctx *context.Context, apiid string, resourceid string, in *ie2datatypes.RESTMethod) error {
+
+	if client == nil {
+		return errors.New("client is null")
+	}
+
+	if ctx == nil {
+		return errors.New("context is null")
+	}
+
+	if in == nil {
+		return errors.New("input RESTMethod object is null")
+	}
+
+	_, e := client.UpdateIntegration(*ctx, &api.UpdateIntegrationInput{
+		HttpMethod: aws.String(in.Name),
+		ResourceId: aws.String(resourceid),
+		RestApiId:  aws.String(apiid),
+	})
+
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+/***
+* Exported Functions
+***/
+func AWSRESTMethodExists(conf *aws.Config, ctx *context.Context, apiid string, resourceid string, method *ie2datatypes.RESTMethod) (bool, error) {
+
+	if method == nil {
+		e := errors.New("method param can not be null")
+		return false, e
+	}
+
+	c, e := createApiGatewayClient(conf, ctx)
+
+	if e != nil {
+		log.Print(e)
+		return false, e
+	}
+
+	o, e := c.GetMethod(*ctx, &api.GetMethodInput{
+		HttpMethod: aws.String(method.Name),
+		ResourceId: aws.String(resourceid),
+		RestApiId:  aws.String(apiid),
+	})
+
+	if e != nil {
+		log.Print(e)
+		return false, e
+	}
+
+	if o == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func AWSRESTResourceExists(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) (bool, error) {
+
+	if input == nil {
+		e := errors.New("input param can not be null")
+		return false, e
+	}
+
+	c, err := createApiGatewayClient(conf, ctx)
+
+	if err != nil {
+		log.Print(err)
+		return false, err
+	}
+
+	_, err = c.GetResource(*ctx, &api.GetResourceInput{
+		ResourceId: aws.String(input.ResourceId),
+		RestApiId:  aws.String(input.ApiId),
+	})
+
+	if err != nil {
+		return false, err
+	}
+
+	log.Printf("Resource %s exists...", input.ResourceId)
+
+	return true, nil
+}
+
+func AWSRESTApiExists(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) (bool, error) {
+
+	if input == nil {
+		e := errors.New("input param can not be null")
+		return false, e
+	}
+
+	c, err := createApiGatewayClient(conf, ctx)
+
+	if err != nil {
+		log.Print(err)
+		return false, err
+	}
+
+	log.Printf("Checking if API exists using id %s", input.ApiId)
+
+	_, err = c.GetRestApi(*ctx, &api.GetRestApiInput{
 		RestApiId: aws.String(input.ApiId),
 	})
 
@@ -49,53 +236,57 @@ func AWSRESTEndpointExists(conf *aws.Config, ctx *context.Context, input *ie2dat
 
 	log.Printf("API %s exists...", input.ApiId)
 
-	/*
-		c.GetResource(*ctx, &api.GetResourceInput{
-			ResourceId: input.,
-		})
-
-
-		_, err := c.GetRoute(*ctx, &api.GetRouteInput{
-			ApiId:   aws.String(input.ApiId),
-			RouteId: aws.String(input.Route),
-		})
-	*/
-
-	if err != nil {
-		return false, err
-	}
-
 	return true, nil
 }
 
-func AWSCreateRESTEndpoint(
-	conf *aws.Config,
-	ctx *context.Context,
-	input *ie2datatypes.RESTEndpointInput) error {
+func AWSCreateRESTResource(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) error {
 
-	if conf == nil {
-		return errors.New("aws.config can not be empty")
+	if input == nil {
+		return errors.New("lambdaconfig can not be null")
 	}
 
 	if ctx == nil {
-		return errors.New("context can not be empty")
+		return errors.New("context can not be null")
 	}
 
-	if input == nil {
-		return errors.New("lambdaconfig can not be empty")
+	// does the resource already exist?
+	// both the api and the resource should be present
+	exists, e := AWSRESTApiExists(conf, ctx, input)
+
+	if e != nil {
+		log.Print(e)
+		return e
 	}
 
-	/*
-		c := api.NewFromConfig(*conf)
+	if !exists {
+		return errors.New("api does not exist")
+	}
 
-		_, e := c.CreateRoute(*ctx, &api.CreateRouteInput{
+	c, e := createApiGatewayClient(conf, ctx)
 
+	if e != nil {
+		return e
+	}
+
+	exists, e = AWSRESTResourceExists(conf, ctx, input)
+
+	if e != nil {
+		return e
+	}
+
+	if !exists {
+
+		// we need to create the REST resource
+		_, e := c.CreateResource(*ctx, &api.CreateResourceInput{
+			ParentId:  aws.String(input.ParentResourceId),
+			PathPart:  aws.String(input.Route),
+			RestApiId: aws.String(input.ApiId),
 		})
 
 		if e != nil {
 			return e
 		}
-	*/
+	}
 
 	return nil
 }
@@ -173,15 +364,15 @@ func AWSGetRESTApiIdFromName(conf *aws.Config, ctx *context.Context, name string
 
 	if len(name) <= 0 {
 		log.Print("Resource name is empty!")
-		return id, errors.New("resource name is empty")
+		return id, errors.New("resource name can not be empty")
 	}
 
 	if conf == nil {
-		return id, errors.New("config is empty")
+		return id, errors.New("config can not be null")
 	}
 
 	if ctx == nil {
-		return id, errors.New("context is empty")
+		return id, errors.New("context can not be null")
 	}
 
 	name = strings.ToLower(name)
@@ -216,20 +407,20 @@ func AWSGetRESTResourceIdFromName(conf *aws.Config, ctx *context.Context, apiid 
 
 	if len(apiid) <= 0 {
 		log.Printf("ApiId value is empty!")
-		return id, errors.New("apiid value is empty")
+		return id, errors.New("apiid value can not be empty")
 	}
 
 	if len(name) <= 0 {
 		log.Print("Resource name is empty!")
-		return id, errors.New("resource name is empty")
+		return id, errors.New("resource name can not be empty")
 	}
 
 	if conf == nil {
-		return id, errors.New("config is empty")
+		return id, errors.New("config can not be null")
 	}
 
 	if ctx == nil {
-		return id, errors.New("context is empty")
+		return id, errors.New("context can not be null")
 	}
 
 	name = strings.ToLower(name)
@@ -264,16 +455,28 @@ func AWSGetRESTResourceIdFromName(conf *aws.Config, ctx *context.Context, apiid 
 	return id, nil
 }
 
-func AWSCreateLambdaIntegration(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) error {
+func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) error {
+
+	if conf == nil {
+		s := "config can not be null"
+		log.Print(s)
+		return errors.New(s)
+	}
+
+	if ctx == nil {
+		s := "context can not be null"
+		log.Print(s)
+		return errors.New(s)
+	}
 
 	if input == nil {
-		log.Printf("RESTEndpointInput value is empty.")
-		return errors.New("can not create lambda integration - input value is empty")
+		log.Printf("RESTEndpointInput value is null.")
+		return errors.New("can not create lambda integration - input value is null")
 	}
 
 	if len(input.Integration.LambdaName) <= 0 {
 		log.Printf("Lambda name is empty!")
-		return errors.New("lambda name is empty")
+		return errors.New("lambda name can not be empty")
 	}
 
 	name := input.Integration.LambdaName
@@ -294,17 +497,42 @@ func AWSCreateLambdaIntegration(conf *aws.Config, ctx *context.Context, input *i
 		return errors.New(msg)
 	}
 
+	// create a client object
 	c := api.NewFromConfig(*conf)
+
+	// create the uri to the lambda function provided
 	uri := fmt.Sprintf("arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:975050010293:function:%s/invocations", name)
 
-	_, error := c.PutIntegration(*ctx, &api.PutIntegrationInput{
-		HttpMethod:          aws.String("POST"),
-		ResourceId:          aws.String(""),
-		RestApiId:           aws.String(""),
-		Type:                types.IntegrationTypeAwsProxy,
-		PassthroughBehavior: aws.String("WHEN_NO_MATCH"),
-		Uri:                 aws.String(uri),
-	})
+	// iterate through each method
+	// check if an integration exists
+	// update if yes
+	// create if no
+	for _, method := range input.Methods {
 
-	return error
+		exists, e := lambdaIntegrationExists(c, ctx, input.ApiId, input.ResourceId, &method)
+
+		if e != nil {
+			log.Print(e)
+			break
+		}
+
+		if exists {
+
+			e := deleteLambdaIntegration(c, ctx, input.ApiId, input.ResourceId, &method)
+
+			if e != nil {
+				log.Print(e)
+				return e
+			}
+		}
+
+		e = createLambdaIntegration(c, ctx, input.ApiId, input.ResourceId, uri, &method)
+
+		if e != nil {
+			log.Print(e)
+			break
+		}
+	}
+
+	return nil
 }

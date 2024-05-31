@@ -11,10 +11,12 @@ type RESTMethod struct {
 }
 
 type RESTEndpointInput struct {
-	ApiId       string
-	ResourceId  string
-	Route       string
-	Stage       string
-	Integration *LambdaIntegration
-	Methods     []RESTMethod
+	ApiId            string
+	ParentResourceId string
+	ResourceId       string
+	ResourceName     string
+	Route            string
+	Stage            string
+	Integration      *LambdaIntegration
+	Methods          []RESTMethod
 }
