@@ -52,15 +52,15 @@ func lambdaIntegrationExists(client *api.Client, ctx *context.Context, apiid str
 		return false, errors.New("input RESTMethod object is empty")
 	}
 
-	out, e := client.GetIntegration(*ctx, &api.GetIntegrationInput{
+	out, _ := client.GetIntegration(*ctx, &api.GetIntegrationInput{
 		HttpMethod: aws.String(in.Name),
 		ResourceId: aws.String(resourceid),
 		RestApiId:  aws.String(apiid),
 	})
 
-	if e != nil {
-		return false, e
-	}
+	// if the integration does NOT exist, we get an error...
+	// since I can't currently find a clean way to handle a 404 response when an integration for the given HttpMethod does NOT exist
+	// i'm ignoring the error here as if it were a 404 and swallowing the error...ugh ;/
 
 	if out != nil {
 		return true, nil
@@ -118,33 +118,6 @@ func deleteLambdaIntegration(client *api.Client, ctx *context.Context, apiid str
 	})
 
 	return e
-}
-
-func updateLambdaIntegration(client *api.Client, ctx *context.Context, apiid string, resourceid string, in *ie2datatypes.RESTMethod) error {
-
-	if client == nil {
-		return errors.New("client is null")
-	}
-
-	if ctx == nil {
-		return errors.New("context is null")
-	}
-
-	if in == nil {
-		return errors.New("input RESTMethod object is null")
-	}
-
-	_, e := client.UpdateIntegration(*ctx, &api.UpdateIntegrationInput{
-		HttpMethod: aws.String(in.Name),
-		ResourceId: aws.String(resourceid),
-		RestApiId:  aws.String(apiid),
-	})
-
-	if e != nil {
-		return e
-	}
-
-	return nil
 }
 
 /***
