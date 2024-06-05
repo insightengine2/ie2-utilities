@@ -291,73 +291,6 @@ func AWSCreateRESTResource(conf *aws.Config, ctx *context.Context, input *ie2dat
 	return nil
 }
 
-/*
-func AWSUpdateRESTEndpoint(
-	conf *aws.Config,
-	ctx *context.Context,
-	input *ie2datatypes.LambdaInput) error {
-
-	if conf == nil {
-		return errors.New("aws.config can not be empty")
-	}
-
-	if ctx == nil {
-		return errors.New("context can not be empty")
-	}
-
-	if input == nil {
-		return errors.New("lambdaconfig can not be empty")
-	}
-
-	c := lambda.NewFromConfig(*conf)
-
-	_, e := c.UpdateFunctionCode(*ctx, &lambda.UpdateFunctionCodeInput{
-		Architectures: []types.Architecture{types.Architecture(input.Architecture)},
-		DryRun:        input.DryRun,
-		FunctionName:  aws.String(input.Name),
-		Publish:       input.Publish,
-		S3Bucket:      aws.String(input.S3Bucket),
-		S3Key:         aws.String(input.S3Key),
-	})
-
-	if e != nil {
-		return e
-	}
-
-	return nil
-}
-
-func AWSDeleteRESTEndpoint(
-	conf *aws.Config,
-	ctx *context.Context,
-	name string) error {
-
-	if conf == nil {
-		return errors.New("aws.config can not be empty")
-	}
-
-	if ctx == nil {
-		return errors.New("context can not be empty")
-	}
-
-	if len(name) <= 0 {
-		return errors.New("lambda name can not be empty")
-	}
-
-	c := lambda.NewFromConfig(*conf)
-
-	_, e := c.DeleteFunction(*ctx, &lambda.DeleteFunctionInput{
-		FunctionName: aws.String(name),
-	})
-
-	if e != nil {
-		return e
-	}
-
-	return nil
-}
-*/
-
 func AWSGetRESTApiIdFromName(conf *aws.Config, ctx *context.Context, name string) (string, error) {
 
 	id := ""
@@ -509,6 +442,8 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 	// create if no
 	for _, method := range input.Methods {
 
+		log.Printf("Checking integration for ApiID %s ResourceId %s Method %s", input.ApiId, input.ResourceId, method.Name)
+
 		exists, e := lambdaIntegrationExists(c, ctx, input.ApiId, input.ResourceId, &method)
 
 		if e != nil {
@@ -518,6 +453,7 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 
 		if exists {
 
+			log.Printf("%s method integration exists. Deleting existing integration.", method.Name)
 			e := deleteLambdaIntegration(c, ctx, input.ApiId, input.ResourceId, &method)
 
 			if e != nil {
@@ -526,6 +462,7 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 			}
 		}
 
+		log.Printf("Creating %s method integration for ApiID %s on Resource %s targeting Lambda %s using URI %s", method.Name, input.ApiId, input.ResourceId, name, uri)
 		e = createLambdaIntegration(c, ctx, input.ApiId, input.ResourceId, uri, &method)
 
 		if e != nil {
