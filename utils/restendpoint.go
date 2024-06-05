@@ -120,6 +120,31 @@ func deleteLambdaIntegration(client *api.Client, ctx *context.Context, apiid str
 	return e
 }
 
+func createRESTMethod(client *api.Client, ctx *context.Context, apiid string, resourceid string, in *ie2datatypes.RESTMethod) error {
+
+	if client == nil {
+		return errors.New("client is null")
+	}
+
+	if ctx == nil {
+		return errors.New("context is null")
+	}
+
+	if in == nil {
+		return errors.New("input RESTMethod object is null")
+	}
+
+	_, e := client.PutMethod(*ctx, &api.PutMethodInput{
+		ApiKeyRequired:    true,
+		AuthorizationType: aws.String("NONE"),
+		HttpMethod:        aws.String(in.Name),
+		ResourceId:        aws.String(resourceid),
+		RestApiId:         aws.String(apiid),
+	})
+
+	return e
+}
+
 /***
 * Exported Functions
 ***/
@@ -415,9 +440,27 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 	// create if no
 	for _, method := range input.Methods {
 
-		log.Printf("Checking integration for ApiID %s ResourceId %s Method %s", input.ApiId, input.ResourceId, method.Name)
+		// does the method exist?
+		exists, e := AWSRESTMethodExists(conf, ctx, input.ApiId, input.ResourceId, &method)
 
-		exists, e := lambdaIntegrationExists(c, ctx, input.ApiId, input.ResourceId, &method)
+		if e != nil {
+			log.Print(e)
+			break
+		}
+
+		if !exists {
+
+			// create the method
+			e := createRESTMethod(c, ctx, input.ApiId, input.ResourceId, &method)
+
+			if e != nil {
+				log.Print(e)
+				break
+			}
+		}
+
+		log.Printf("Checking integration for ApiID %s ResourceId %s Method %s", input.ApiId, input.ResourceId, method.Name)
+		exists, e = lambdaIntegrationExists(c, ctx, input.ApiId, input.ResourceId, &method)
 
 		if e != nil {
 			log.Print(e)
