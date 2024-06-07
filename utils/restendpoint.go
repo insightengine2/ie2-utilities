@@ -603,8 +603,17 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 	}
 
 	log.Printf("Updating API %s Resource %s Stage %s and DeploymentID %s", input.ApiId, input.ResourceId, input.Stage, *newDeployment.Id)
-	_, e = c.UpdateRestApi(*ctx, &api.UpdateRestApiInput{
-		RestApiId: aws.String(input.ApiId),
+
+	op := types.PatchOperation{
+		Op:    types.OpReplace,
+		Path:  aws.String("/deploymentId"),
+		Value: aws.String(*newDeployment.Id),
+	}
+
+	_, e = c.UpdateStage(*ctx, &api.UpdateStageInput{
+		RestApiId:       aws.String(input.ApiId),
+		StageName:       aws.String(input.Stage),
+		PatchOperations: []types.PatchOperation{op},
 	})
 
 	if e != nil {
