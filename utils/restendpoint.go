@@ -216,19 +216,27 @@ func AWSRESTMethodExists(conf *aws.Config, ctx *context.Context, apiid string, r
 	}
 
 	log.Printf("Checking if Method %s exists on API %s for Resource %s", method.Name, apiid, resourceid)
-	o, e := c.GetMethod(*ctx, &api.GetMethodInput{
+	_, e = c.GetMethod(*ctx, &api.GetMethodInput{
 		HttpMethod: aws.String(method.Name),
 		ResourceId: aws.String(resourceid),
 		RestApiId:  aws.String(apiid),
 	})
 
+	// this is freaking stupid that the GetMethod call returns an error on 404 (ie. method does NOT exist)
+	// technically accurate, but I have to parse the error string and look for statuscode 404 to
+	// see if it's a HttpResponse vs another type of error...wtf...this can't be accurate
 	if e != nil {
-		log.Print(e)
-		return false, e
-	}
+		src := strings.ToLower(e.Error())
+		status := strings.Contains(src, "statuscode")
+		notfound := strings.Contains(src, "404")
 
-	if o == nil {
-		return false, nil
+		if status && notfound {
+			return false, nil
+		} else {
+			// some other error occurred...
+			log.Print(e)
+			return false, e
+		}
 	}
 
 	return true, nil
@@ -567,6 +575,7 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 		return e
 	}
 
+	log.Print("Successfully created a new Deployment.")
 	log.Printf("Checking if stage %s exists", input.Stage)
 	exists, e = stageExists(c, ctx, input.ApiId, input.Stage)
 
@@ -593,9 +602,9 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 		log.Printf("Stage %s exists!", input.Stage)
 	}
 
-	log.Printf("Updating API %s Resource %s Stage %s and DeploymentID %s", input.ApiId, input.ResourceName, input.Stage, *newDeployment.Id)
+	log.Printf("Updating API %s Resource %s Stage %s and DeploymentID %s", input.ApiId, input.ResourceId, input.Stage, *newDeployment.Id)
 	_, e = c.UpdateRestApi(*ctx, &api.UpdateRestApiInput{
-		RestApiId: &input.ApiId,
+		RestApiId: aws.String(input.ApiId),
 	})
 
 	if e != nil {
