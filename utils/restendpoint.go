@@ -215,6 +215,7 @@ func AWSRESTMethodExists(conf *aws.Config, ctx *context.Context, apiid string, r
 		return false, e
 	}
 
+	log.Printf("Checking if Method %s exists on API %s for Resource %s", method.Name, apiid, resourceid)
 	o, e := c.GetMethod(*ctx, &api.GetMethodInput{
 		HttpMethod: aws.String(method.Name),
 		ResourceId: aws.String(resourceid),
@@ -493,6 +494,7 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 	// create if no
 	for _, method := range input.Methods {
 
+		log.Printf("Checking if REST Method %s exists", method.Name)
 		// does the method exist?
 		exists, e := AWSRESTMethodExists(conf, ctx, input.ApiId, input.ResourceId, &method)
 
@@ -510,6 +512,12 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 				log.Print(e)
 				break
 			}
+
+			log.Printf("Successfully created REST method %s", method.Name)
+
+		} else {
+
+			log.Printf("REST Method %s exists!", method.Name)
 		}
 
 		log.Printf("Checking integration for ApiID %s ResourceId %s Method %s", input.ApiId, input.ResourceId, method.Name)
@@ -529,6 +537,12 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 				log.Print(e)
 				return e
 			}
+
+			log.Printf("Succesfully deleted lambda integration for method %s", method.Name)
+
+		} else {
+
+			log.Printf("%s method integration does NOT exist.", method.Name)
 		}
 
 		log.Printf("Creating %s method integration for ApiID %s on Resource %s targeting Lambda %s using URI %s", method.Name, input.ApiId, input.ResourceId, name, uri)
@@ -538,6 +552,8 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 			log.Print(e)
 			break
 		}
+
+		log.Printf("Successfully created an integration for method %s", method.Name)
 	}
 
 	log.Printf("Deploying API %s into environment %s", input.ApiId, input.Stage)
@@ -561,6 +577,7 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 
 	if !exists {
 
+		log.Printf("Stage %s does NOT exist", input.Stage)
 		log.Printf("Creating stage %s", input.Stage)
 		e = createStage(c, ctx, input.ApiId, input.Stage, *newDeployment.Id)
 
@@ -568,6 +585,12 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 			log.Print(e)
 			return e
 		}
+
+		log.Printf("Successfully created stage %s", input.Stage)
+
+	} else {
+
+		log.Printf("Stage %s exists!", input.Stage)
 	}
 
 	log.Printf("Updating API %s Resource %s Stage %s and DeploymentID %s", input.ApiId, input.ResourceName, input.Stage, *newDeployment.Id)
@@ -579,6 +602,8 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 		log.Print(e)
 		return e
 	}
+
+	log.Printf("Successfully updated API.")
 
 	return nil
 }
