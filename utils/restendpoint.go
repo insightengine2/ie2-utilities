@@ -145,6 +145,59 @@ func createRESTMethod(client *api.Client, ctx *context.Context, apiid string, re
 	return e
 }
 
+func stageExists(client *api.Client, ctx *context.Context, apiid string, stage string) (bool, error) {
+
+	if client == nil {
+		return false, errors.New("client is null")
+	}
+
+	if ctx == nil {
+		return false, errors.New("context is null")
+	}
+
+	if len(stage) <= 0 {
+		return false, errors.New("stage value is empty")
+	}
+
+	out, e := client.GetStage(*ctx, &api.GetStageInput{
+		RestApiId: aws.String(apiid),
+		StageName: aws.String(stage),
+	})
+
+	if e != nil {
+		return false, e
+	}
+
+	if out == nil {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func createStage(client *api.Client, ctx *context.Context, apiid string, stage string, deploymentid string) error {
+
+	if client == nil {
+		return errors.New("client is null")
+	}
+
+	if ctx == nil {
+		return errors.New("context is null")
+	}
+
+	if len(stage) <= 0 {
+		return errors.New("stage value is empty")
+	}
+
+	_, e := client.CreateStage(*ctx, &api.CreateStageInput{
+		DeploymentId: aws.String(deploymentid),
+		RestApiId:    aws.String(apiid),
+		StageName:    aws.String(stage),
+	})
+
+	return e
+}
+
 /***
 * Exported Functions
 ***/
@@ -485,6 +538,46 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 			log.Print(e)
 			break
 		}
+	}
+
+	log.Printf("Deploying API %s into environment %s", input.ApiId, input.Stage)
+	log.Printf("Creating a new Deployment")
+	newDeployment, e := c.CreateDeployment(*ctx, &api.CreateDeploymentInput{
+		RestApiId: &input.ApiId,
+	})
+
+	if e != nil {
+		log.Print(e)
+		return e
+	}
+
+	log.Printf("Checking if stage %s exists", input.Stage)
+	exists, e = stageExists(c, ctx, input.ApiId, input.Stage)
+
+	if e != nil {
+		log.Print(e)
+		return e
+	}
+
+	if !exists {
+
+		log.Printf("Creating stage %s", input.Stage)
+		e = createStage(c, ctx, input.ApiId, input.Stage, *newDeployment.Id)
+
+		if e != nil {
+			log.Print(e)
+			return e
+		}
+	}
+
+	log.Printf("Updating API %s Resource %s Stage %s and DeploymentID %s", input.ApiId, input.ResourceName, input.Stage, *newDeployment.Id)
+	_, e = c.UpdateRestApi(*ctx, &api.UpdateRestApiInput{
+		RestApiId: &input.ApiId,
+	})
+
+	if e != nil {
+		log.Print(e)
+		return e
 	}
 
 	return nil
