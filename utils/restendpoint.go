@@ -242,34 +242,6 @@ func AWSRESTMethodExists(conf *aws.Config, ctx *context.Context, apiid string, r
 	return true, nil
 }
 
-func AWSRESTResourceExists(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) (bool, error) {
-
-	if input == nil {
-		e := errors.New("input param can not be null")
-		return false, e
-	}
-
-	c, err := createApiGatewayClient(conf, ctx)
-
-	if err != nil {
-		log.Print(err)
-		return false, err
-	}
-
-	_, err = c.GetResource(*ctx, &api.GetResourceInput{
-		ResourceId: aws.String(input.ResourceId),
-		RestApiId:  aws.String(input.ApiId),
-	})
-
-	if err != nil {
-		return false, err
-	}
-
-	log.Printf("Resource %s exists...", input.ResourceId)
-
-	return true, nil
-}
-
 func AWSRESTApiExists(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) (bool, error) {
 
 	if input == nil {
@@ -299,14 +271,22 @@ func AWSRESTApiExists(conf *aws.Config, ctx *context.Context, input *ie2datatype
 	return true, nil
 }
 
-func AWSCreateRESTResource(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) error {
+func AWSCreateRESTResource(conf *aws.Config, ctx *context.Context, input *ie2datatypes.RESTEndpointInput) (string, error) {
 
 	if input == nil {
-		return errors.New("lambdaconfig can not be null")
+		return "", errors.New("lambdaconfig can not be null")
 	}
 
 	if ctx == nil {
-		return errors.New("context can not be null")
+		return "", errors.New("context can not be null")
+	}
+
+	if len(input.ResourceName) <= 0 {
+		return "", errors.New("input ResourceName can not be empty")
+	}
+
+	if len(input.Route) <= 0 {
+		return "", errors.New("input Route can not be empty")
 	}
 
 	// does the resource already exist?
@@ -315,40 +295,42 @@ func AWSCreateRESTResource(conf *aws.Config, ctx *context.Context, input *ie2dat
 
 	if e != nil {
 		log.Print(e)
-		return e
+		return "", e
 	}
 
 	if !exists {
-		return errors.New("api does not exist")
+		return "", errors.New("api does not exist")
 	}
 
 	c, e := createApiGatewayClient(conf, ctx)
 
 	if e != nil {
-		return e
+		return "", e
 	}
 
-	exists, e = AWSRESTResourceExists(conf, ctx, input)
+	id, e := AWSGetRESTResourceIdFromName(conf, ctx, input.ApiId, input.ResourceName)
 
 	if e != nil {
-		return e
+		return "", e
 	}
 
-	if !exists {
-
-		// we need to create the REST resource
-		_, e := c.CreateResource(*ctx, &api.CreateResourceInput{
-			ParentId:  aws.String(input.ParentResourceId),
-			PathPart:  aws.String(input.Route),
-			RestApiId: aws.String(input.ApiId),
-		})
-
-		if e != nil {
-			return e
-		}
+	if len(id) > 0 {
+		// resource already exists
+		return id, nil
 	}
 
-	return nil
+	// we need to create the REST resource
+	out, e := c.CreateResource(*ctx, &api.CreateResourceInput{
+		ParentId:  aws.String(input.ParentResourceId),
+		PathPart:  aws.String(input.Route),
+		RestApiId: aws.String(input.ApiId),
+	})
+
+	if e != nil {
+		return "", e
+	}
+
+	return *out.Id, nil
 }
 
 func AWSGetRESTApiIdFromName(conf *aws.Config, ctx *context.Context, name string) (string, error) {
@@ -442,7 +424,7 @@ func AWSGetRESTResourceIdFromName(conf *aws.Config, ctx *context.Context, apiid 
 	}
 
 	if len(id) <= 0 {
-		log.Printf("Failed to find a resource with a path part named %s after searching %d resources", name, len(out.Items))
+		log.Printf("Unable to find a resource with a path part named %s after searching %d resources", name, len(out.Items))
 	}
 
 	return id, nil
