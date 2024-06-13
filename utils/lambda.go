@@ -3,6 +3,7 @@ package ie2utilities
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -140,6 +141,46 @@ func AWSDeleteLambda(
 
 	_, e := c.DeleteFunction(*ctx, &lambda.DeleteFunctionInput{
 		FunctionName: aws.String(name),
+	})
+
+	if e != nil {
+		return e
+	}
+
+	return nil
+}
+
+func AWSAddApiGatewayPermission(
+	conf *aws.Config,
+	ctx *context.Context,
+	method string,
+	sourcearn string,
+	lambdaname string) error {
+
+	if conf == nil {
+		return errors.New("aws.config can not be empty")
+	}
+
+	if ctx == nil {
+		return errors.New("context can not be empty")
+	}
+
+	if len(lambdaname) <= 0 {
+		return errors.New("lambdaname can not be empty")
+	}
+
+	if len(method) <= 0 {
+		return errors.New("method can not be empty")
+	}
+
+	c := lambda.NewFromConfig(*conf)
+
+	_, e := c.AddPermission(*ctx, &lambda.AddPermissionInput{
+		Action:       aws.String("lambda:InvokeFunction"),
+		FunctionName: aws.String(lambdaname),
+		Principal:    aws.String("apigateway.amazonaws.com"),
+		StatementId:  aws.String(fmt.Sprintf("AllowAPIMethod%sOnFunction%s", method, lambdaname)),
+		SourceArn:    aws.String(sourcearn),
 	})
 
 	if e != nil {

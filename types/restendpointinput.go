@@ -11,6 +11,8 @@ type RESTMethod struct {
 }
 
 type RESTEndpointInput struct {
+	AccountId        string
+	Region           string
 	ApiId            string
 	ParentResourceId string
 	ResourceId       string

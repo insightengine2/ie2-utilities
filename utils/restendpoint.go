@@ -472,12 +472,12 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 		return errors.New("lambda name can not be empty")
 	}
 
-	name := input.Integration.LambdaName
+	lambdaname := input.Integration.LambdaName
 
-	log.Printf("Attempting to create an integration for Lambda Function: %s", name)
-	log.Printf("Making sure lambda '%s' exists.", name)
+	log.Printf("Attempting to create an integration for Lambda Function: %s", lambdaname)
+	log.Printf("Making sure lambda '%s' exists.", lambdaname)
 
-	exists, e := AWSLambdaExists(conf, ctx, name)
+	exists, e := AWSLambdaExists(conf, ctx, lambdaname)
 
 	if e != nil {
 		log.Print("Failure calling AWSLambdaExists.")
@@ -485,8 +485,8 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 	}
 
 	if !exists {
-		msg := fmt.Sprintf("lambda '%s' does NOT exist.", name)
-		log.Printf("Can not create integration. Lambda function '%s' does NOT exist.", name)
+		msg := fmt.Sprintf("lambda '%s' does NOT exist.", lambdaname)
+		log.Printf("Can not create integration. Lambda function '%s' does NOT exist.", lambdaname)
 		return errors.New(msg)
 	}
 
@@ -494,7 +494,7 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 	c := api.NewFromConfig(*conf)
 
 	// create the uri to the lambda function provided
-	uri := fmt.Sprintf("arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:975050010293:function:%s/invocations", name)
+	uri := fmt.Sprintf("arn:aws:apigateway:%s:lambda:path/2015-03-31/functions/arn:aws:lambda:%s:%s:function:%s/invocations", input.Region, input.Region, input.AccountId, lambdaname)
 
 	// iterate through each method
 	// check if an integration exists
@@ -553,7 +553,7 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 			log.Printf("%s method integration does NOT exist.", method.Name)
 		}
 
-		log.Printf("Creating %s method integration for ApiID %s on Resource %s targeting Lambda %s using URI %s", method.Name, input.ApiId, input.ResourceId, name, uri)
+		log.Printf("Creating %s method integration for ApiID %s on Resource %s targeting Lambda %s using URI %s", method.Name, input.ApiId, input.ResourceId, lambdaname, uri)
 		e = createLambdaIntegration(c, ctx, input.ApiId, input.ResourceId, uri, &method)
 
 		if e != nil {
@@ -562,6 +562,12 @@ func AWSCreateLambdaIntegrations(conf *aws.Config, ctx *context.Context, input *
 		}
 
 		log.Printf("Successfully created an integration for method %s", method.Name)
+
+		// make sure permissions exist on the lambda function
+		// to allow invocation from the apigateway
+		sourcearn := fmt.Sprintf("arn:aws:execute-api:%s:%s:%s/*/%s/%s", input.Region, input.AccountId, input.ApiId, method.Name, input.ResourceName)
+
+		AWSAddApiGatewayPermission(conf, ctx, method.Name, sourcearn, lambdaname)
 	}
 
 	log.Printf("Deploying API %s into environment %s", input.ApiId, input.Stage)
