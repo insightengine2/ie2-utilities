@@ -135,7 +135,5 @@ func IE2RDSPostgresConnection() (*pgx.Conn, error) {
 		return nil, err
 	}
 
-	defer db.Close(context.Background())
-
 	return db, nil
 }
