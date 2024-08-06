@@ -117,6 +117,15 @@ func AWSUpdateLambda(
 		return e
 	}
 
+	_, e = c.UpdateFunctionConfiguration(*ctx, &lambda.UpdateFunctionConfigurationInput{
+		FunctionName: aws.String(input.Name),
+		Role:         aws.String(input.RoleARN),
+	})
+
+	if e != nil {
+		return e
+	}
+
 	return nil
 }
 
