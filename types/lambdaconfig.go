@@ -2,6 +2,7 @@ package ie2datatypes
 
 type LambdaConfig struct {
 	Name         string `yaml:"name"`
+	RoleName     string `yaml:"rolename"`
 	Architecture string `yaml:"architecture"`
 	Runtime      string `yaml:"runtime"`
 	Handler      string `yaml:"handler"`
