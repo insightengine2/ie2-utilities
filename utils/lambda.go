@@ -106,7 +106,7 @@ func AWSUpdateLambda(
 
 	c := lambda.NewFromConfig(*conf)
 
-	updateRes, e := c.UpdateFunctionCode(*ctx, &lambda.UpdateFunctionCodeInput{
+	_, e := c.UpdateFunctionCode(*ctx, &lambda.UpdateFunctionCodeInput{
 		Architectures: []types.Architecture{types.Architecture(input.Architecture)},
 		DryRun:        *aws.Bool(input.DryRun),
 		FunctionName:  aws.String(input.Name),
@@ -119,9 +119,19 @@ func AWSUpdateLambda(
 		return e
 	}
 
-	log.Printf("Submitted lambda %s code update. Current status is %s", input.Name, updateRes.LastUpdateStatus)
+	// the lastupdatestatus is NOT returned by the call to UpdateFunctionCodeInput
+	// so we need to retrieve it...
+	o, e := c.GetFunction(*ctx, &lambda.GetFunctionInput{
+		FunctionName: aws.String(input.Name),
+	})
 
-	var status types.LastUpdateStatus = updateRes.LastUpdateStatus
+	if e != nil {
+		return e
+	}
+
+	log.Printf("Submitted lambda %s code update. Current status is %s", input.Name, o.Configuration.LastUpdateStatus)
+
+	var status types.LastUpdateStatus = o.Configuration.LastUpdateStatus
 	maxWait := 60000 // ms (i.e in seconds: maxWait / 1000)
 	waitStep := 5
 	curWait := 0
