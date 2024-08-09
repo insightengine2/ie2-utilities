@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -104,7 +106,7 @@ func AWSUpdateLambda(
 
 	c := lambda.NewFromConfig(*conf)
 
-	_, e := c.UpdateFunctionCode(*ctx, &lambda.UpdateFunctionCodeInput{
+	updateRes, e := c.UpdateFunctionCode(*ctx, &lambda.UpdateFunctionCodeInput{
 		Architectures: []types.Architecture{types.Architecture(input.Architecture)},
 		DryRun:        input.DryRun,
 		FunctionName:  aws.String(input.Name),
@@ -117,13 +119,58 @@ func AWSUpdateLambda(
 		return e
 	}
 
-	_, e = c.UpdateFunctionConfiguration(*ctx, &lambda.UpdateFunctionConfigurationInput{
-		FunctionName: aws.String(input.Name),
-		Role:         aws.String(input.RoleARN),
-	})
+	log.Printf("Submitted lambda %s code update. Current status is %s", input.Name, updateRes.LastUpdateStatus)
 
-	if e != nil {
-		return e
+	var status types.LastUpdateStatus = updateRes.LastUpdateStatus
+	maxWait := 60000 // ms (i.e in seconds: maxWait / 1000)
+	waitStep := 5
+	curWait := 0
+
+	for status == types.LastUpdateStatusInProgress || (curWait < maxWait) {
+
+		log.Printf("Lambda code update is still in progress. Waiting...")
+		time.Sleep(time.Duration(waitStep) * time.Second)
+		curWait += waitStep
+
+		log.Printf("Retrieving status for lambda %s after %d seconds.", input.Name, waitStep)
+
+		// retrieve and log current status
+		o, e := c.GetFunction(*ctx, &lambda.GetFunctionInput{
+			FunctionName: aws.String(input.Name),
+		})
+
+		if e != nil {
+			return e
+		}
+
+		log.Printf("Status retrieved. Lambda %s is currently %s", input.Name, o.Configuration.State)
+		status = o.Configuration.LastUpdateStatus
+	}
+
+	if status == types.LastUpdateStatusFailed {
+		msg := fmt.Sprintf("Lambda %s code failed to update.", input.Name)
+		log.Print(msg)
+		return errors.New(msg)
+	}
+
+	if status == types.LastUpdateStatusInProgress {
+		msg := fmt.Sprintf("Lambda %s code is still updating after %d seconds...consider increasing the timeout.", input.Name, (maxWait / 1000))
+		log.Print(msg)
+		return errors.New(msg)
+	}
+
+	// if the code update was successful
+
+	if status == types.LastUpdateStatusSuccessful {
+
+		_, e = c.UpdateFunctionConfiguration(*ctx, &lambda.UpdateFunctionConfigurationInput{
+			FunctionName: aws.String(input.Name),
+			Role:         aws.String(input.RoleARN),
+		})
+
+		if e != nil {
+			return e
+		}
 	}
 
 	return nil
