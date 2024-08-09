@@ -108,9 +108,9 @@ func AWSUpdateLambda(
 
 	updateRes, e := c.UpdateFunctionCode(*ctx, &lambda.UpdateFunctionCodeInput{
 		Architectures: []types.Architecture{types.Architecture(input.Architecture)},
-		DryRun:        input.DryRun,
+		DryRun:        *aws.Bool(input.DryRun),
 		FunctionName:  aws.String(input.Name),
-		Publish:       input.Publish,
+		Publish:       *aws.Bool(input.Publish),
 		S3Bucket:      aws.String(input.S3Bucket),
 		S3Key:         aws.String(input.S3Key),
 	})
