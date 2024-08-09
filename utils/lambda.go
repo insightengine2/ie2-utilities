@@ -126,7 +126,7 @@ func AWSUpdateLambda(
 	waitStep := 5
 	curWait := 0
 
-	for status == types.LastUpdateStatusInProgress || (curWait < maxWait) {
+	for status == types.LastUpdateStatusInProgress && (curWait < maxWait) {
 
 		log.Printf("Lambda code update is still in progress. Waiting...")
 		time.Sleep(time.Duration(waitStep) * time.Second)
