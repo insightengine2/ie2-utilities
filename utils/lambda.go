@@ -143,7 +143,7 @@ func AWSUpdateLambda(
 			return e
 		}
 
-		log.Printf("Status retrieved. Lambda %s is currently %s", input.Name, o.Configuration.State)
+		log.Printf("Status retrieved. Lambda %s is currently %s", input.Name, o.Configuration.LastUpdateStatus)
 		status = o.Configuration.LastUpdateStatus
 	}
 
