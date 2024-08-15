@@ -127,7 +127,7 @@ func IE2RDSPostgresConnection() (*pgx.Conn, error) {
 	}
 
 	// connection string - assemble!
-	connString := fmt.Sprintf("postgres://%s:%s/@%s:%s/%s", rdsParams.DBUserName, pwd, rdsParams.DBHost, rdsParams.DBPort, rdsParams.DBName)
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", rdsParams.DBUserName, pwd, rdsParams.DBHost, rdsParams.DBPort, rdsParams.DBName)
 
 	db, err := pgx.Connect(context.Background(), connString)
 
