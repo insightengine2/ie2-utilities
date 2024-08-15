@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -126,8 +127,10 @@ func IE2RDSPostgresConnection() (*pgx.Conn, error) {
 		return nil, err
 	}
 
+	escapedPWD := url.QueryEscape(pwd)
+
 	// connection string - assemble!
-	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", rdsParams.DBUserName, pwd, rdsParams.DBHost, rdsParams.DBPort, rdsParams.DBName)
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", rdsParams.DBUserName, escapedPWD, rdsParams.DBHost, rdsParams.DBPort, rdsParams.DBName)
 
 	db, err := pgx.Connect(context.Background(), connString)
 
