@@ -87,20 +87,20 @@ func getRDSPWD() (string, error) {
 	config, err := config.LoadDefaultConfig(context.TODO())
 
 	if err != nil {
-		log.Printf(err.Error())
+		log.Print(err.Error())
 		return "", err
 	}
 
 	sm := secretsmanager.NewFromConfig(config)
 
 	if sm == nil {
-		msg := "Failed to create secretsmanager client"
+		msg := "failed to create secretsmanager client"
 		log.Print(msg)
 		return "", errors.New(msg)
 	}
 
 	val, err := sm.GetSecretValue(context.TODO(), &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(ENV_SECRETKEY),
+		SecretId:     aws.String(secretKey),
 		VersionStage: aws.String("AWSCURRENT"),
 	})
 
