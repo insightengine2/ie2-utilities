@@ -2,6 +2,7 @@ package ie2awsrdslib
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -22,6 +23,11 @@ const ENV_RDS_PORT = "IE2_RDS_PORT"
 const ENV_REGION = "AWS_REGION"
 const ENV_USERNAME = "IE2_RDS_UNAME"
 const ENV_SECRETKEY = "IE2_RDS_PWD_KEY"
+
+type RDSLogin struct {
+	UserName string `json:"username"`
+	Password string `json:"password"`
+}
 
 func getRDSParams() (*ie2datatypes.RDSParams, error) {
 
@@ -76,7 +82,7 @@ func getRDSParams() (*ie2datatypes.RDSParams, error) {
 	return &res, nil
 }
 
-func getRDSPWD() (string, error) {
+func getRDSLogin() (*RDSLogin, error) {
 
 	log.Print("Retrieving RDS password")
 	secretKey := os.Getenv(ENV_SECRETKEY)
@@ -84,7 +90,7 @@ func getRDSPWD() (string, error) {
 	if len(secretKey) <= 0 {
 		msg := fmt.Sprintf("missing environment variable: %s", ENV_SECRETKEY)
 		log.Print(msg)
-		return "", errors.New(msg)
+		return nil, errors.New(msg)
 	}
 
 	log.Print("Loading the default config")
@@ -92,7 +98,7 @@ func getRDSPWD() (string, error) {
 
 	if err != nil {
 		log.Print(err.Error())
-		return "", err
+		return nil, err
 	}
 
 	log.Print("Creating a new secrets manager client")
@@ -101,7 +107,7 @@ func getRDSPWD() (string, error) {
 	if sm == nil {
 		msg := "failed to create secretsmanager client"
 		log.Print(msg)
-		return "", errors.New(msg)
+		return nil, errors.New(msg)
 	}
 
 	log.Print("Retrieving secret value")
@@ -112,7 +118,7 @@ func getRDSPWD() (string, error) {
 
 	if err != nil {
 		log.Print(err)
-		return "", err
+		return nil, err
 	}
 
 	log.Print("WARNING WARNING WARNING")
@@ -123,7 +129,17 @@ func getRDSPWD() (string, error) {
 	log.Print("WARNING WARNING WARNING")
 	log.Print("WARNING WARNING WARNING")
 
-	return *val.SecretString, nil
+	// the value is returned as a JSON formatted string...sure
+	// so we need to convert it to a JSON object and access the retrieved value
+	var login RDSLogin
+	err = json.Unmarshal([]byte(*val.SecretString), &login)
+
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
+
+	return &login, nil
 }
 
 func IE2RDSPostgresConnection() (*pgx.Conn, error) {
@@ -135,18 +151,24 @@ func IE2RDSPostgresConnection() (*pgx.Conn, error) {
 		return nil, err
 	}
 
-	pwd, err := getRDSPWD()
+	login, err := getRDSLogin()
 
 	if err != nil {
 		return nil, err
 	}
 
-	if len(pwd) <= 0 {
+	if login == nil {
 		return nil, errors.New("database password is empty or nil")
 	}
 
 	log.Print("URL escape connection string")
-	escapedPWD := url.QueryEscape(pwd)
+	escapedPWD := url.QueryEscape(login.Password)
+
+	// use secrets username if it exists
+	if len(login.UserName) >= 0 {
+		log.Print("Using username returned by secrets manager")
+		rdsParams.DBUserName = login.UserName
+	}
 
 	// connection string - assemble!
 	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", rdsParams.DBUserName, escapedPWD, rdsParams.DBHost, rdsParams.DBPort, rdsParams.DBName)
