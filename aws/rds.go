@@ -121,14 +121,6 @@ func getRDSLogin() (*RDSLogin, error) {
 		return nil, err
 	}
 
-	log.Print("WARNING WARNING WARNING")
-	log.Print("WARNING WARNING WARNING")
-	log.Print("WARNING WARNING WARNING")
-	log.Printf("Retrieved password: %s", *val.SecretString)
-	log.Print("WARNING WARNING WARNING")
-	log.Print("WARNING WARNING WARNING")
-	log.Print("WARNING WARNING WARNING")
-
 	// the value is returned as a JSON formatted string...sure
 	// so we need to convert it to a JSON object and access the retrieved value
 	var login RDSLogin
