@@ -9,6 +9,7 @@ import (
 
 func IE2GetEnv(envname string) (string, error) {
 
+	log.Printf("Retrieving env variable %s", envname)
 	res := os.Getenv(envname)
 
 	if len(res) <= 0 {

@@ -25,6 +25,7 @@ const ENV_SECRETKEY = "IE2_RDS_PWD_KEY"
 
 func getRDSParams() (*ie2datatypes.RDSParams, error) {
 
+	log.Print("Retrieving RDS Params")
 	res := ie2datatypes.RDSParams{}
 
 	// get username
@@ -77,6 +78,7 @@ func getRDSParams() (*ie2datatypes.RDSParams, error) {
 
 func getRDSPWD() (string, error) {
 
+	log.Print("Retrieving RDS password")
 	secretKey := os.Getenv(ENV_SECRETKEY)
 
 	if len(secretKey) <= 0 {
@@ -85,6 +87,7 @@ func getRDSPWD() (string, error) {
 		return "", errors.New(msg)
 	}
 
+	log.Print("Loading the default config")
 	config, err := config.LoadDefaultConfig(context.TODO())
 
 	if err != nil {
@@ -92,6 +95,7 @@ func getRDSPWD() (string, error) {
 		return "", err
 	}
 
+	log.Print("Creating a new secrets manager client")
 	sm := secretsmanager.NewFromConfig(config)
 
 	if sm == nil {
@@ -100,6 +104,7 @@ func getRDSPWD() (string, error) {
 		return "", errors.New(msg)
 	}
 
+	log.Print("Retrieving secret value")
 	val, err := sm.GetSecretValue(context.TODO(), &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(secretKey),
 		VersionStage: aws.String("AWSCURRENT"),
@@ -115,6 +120,7 @@ func getRDSPWD() (string, error) {
 
 func IE2RDSPostgresConnection() (*pgx.Conn, error) {
 
+	log.Print("Creating a Postgres Connection")
 	rdsParams, err := getRDSParams()
 
 	if err != nil {
@@ -127,11 +133,13 @@ func IE2RDSPostgresConnection() (*pgx.Conn, error) {
 		return nil, err
 	}
 
+	log.Print("URL escape connection string")
 	escapedPWD := url.QueryEscape(pwd)
 
 	// connection string - assemble!
 	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", rdsParams.DBUserName, escapedPWD, rdsParams.DBHost, rdsParams.DBPort, rdsParams.DBName)
 
+	log.Print("Attempting to create DB Connection")
 	db, err := pgx.Connect(context.Background(), connString)
 
 	if err != nil {
