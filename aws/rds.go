@@ -115,6 +115,14 @@ func getRDSPWD() (string, error) {
 		return "", err
 	}
 
+	log.Print("WARNING WARNING WARNING")
+	log.Print("WARNING WARNING WARNING")
+	log.Print("WARNING WARNING WARNING")
+	log.Printf("Retrieved password: %s", *val.SecretString)
+	log.Print("WARNING WARNING WARNING")
+	log.Print("WARNING WARNING WARNING")
+	log.Print("WARNING WARNING WARNING")
+
 	return *val.SecretString, nil
 }
 
@@ -131,6 +139,10 @@ func IE2RDSPostgresConnection() (*pgx.Conn, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	if len(pwd) <= 0 {
+		return nil, errors.New("database password is empty or nil")
 	}
 
 	log.Print("URL escape connection string")
