@@ -61,6 +61,7 @@ func MetaDataParser(conf *aws.Config, ctx *context.Context, bucket string, key s
 
 			if err != nil {
 				log.Printf("Error Unmarshalling config file to JSON.")
+				log.Print("stuff")
 				return ret, err
 			}
 
