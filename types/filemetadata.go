@@ -11,7 +11,7 @@ type Author struct {
 	FirstName  string  `json:"firstname" db:"fname"`
 	MiddleName *string `json:"middlename,omitempty" db:"mname"`
 	LastName   string  `json:"lastname" db:"lname"`
-	Title      string  `json:"title,omitempty" db:"title"`
+	Title      *string `json:"title,omitempty" db:"title"`
 	IsActive   bool    `json:"isactive,omitempty" db:"isactive"`
 	CreatedOn  *string `json:"createdon,omitempty" db:"createdOn"`
 	UpdatedOn  *string `json:"updatedon,omitempty" db:"updatedOn"`
