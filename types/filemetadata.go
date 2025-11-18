@@ -1,8 +1,14 @@
 package ie2datatypes
 
 type Paper struct {
+	Id            *int           `json:"id,omitempty" db:"id"`
+	Title         string         `json:"title" db:"title"`
+	Abstract      *string        `json:"abstract,omitempty" db:"abstract"`
+	Url           *string        `json:"url,omitempty" db:"url"`
+	CreatedOn     *string        `json:"createdon,omitempty" db:"createdOn"`
+	UpdatedOn     *string        `json:"updatedon,omitempty" db:"updatedOn"`
+	DeletedOn     *string        `json:"deletedon,omitempty" db:"deletedOn"`
 	PageCnt       *int           `json:"pagecnt,omitempty"`
-	Title         string         `json:"title"`
 	ResearchAreas []ResearchArea `json:"researchareas"`
 }
 
@@ -17,6 +23,11 @@ type Author struct {
 	UpdatedOn  *string `json:"updatedon,omitempty" db:"updatedOn"`
 	DeletedOn  *string `json:"deletedon,omitempty" db:"deletedOn"`
 	Papers     []Paper `json:"papers,omitempty" db:"-"`
+}
+
+type AuthorPaper struct {
+	AuthorId int `json:"authorid" db:"authorid"`
+	PaperId  int `json:"paperid" db:"paperid"`
 }
 
 type ResearchArea struct {
