@@ -3,6 +3,7 @@ package ie2utilities
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -70,6 +71,27 @@ func MetaDataParser(conf *aws.Config, ctx *context.Context, bucket string, key s
 
 	} else {
 		log.Printf("Unable to read file contents!")
+	}
+
+	return ret, nil
+}
+
+func AgenticMetaDataParser(buffer *bytes.Buffer) (ie2datatypes.AgenticFileMetaData, error) {
+
+	ret := ie2datatypes.AgenticFileMetaData{}
+
+	if buffer == nil || buffer.Len() <= 0 {
+		return ret, errors.New("can not parse agenticmetadata, the buffer is null or contains no unread data")
+	}
+
+	log.Print("Buffer Contents:")
+	log.Printf("%s", buffer.String())
+	log.Printf("Preparing to unmarshal agenticmetadata json.")
+	err := yaml.Unmarshal(buffer.Bytes(), &ret)
+
+	if err != nil {
+		log.Printf("Error unmarshalling agentic metadata file to json.")
+		return ret, err
 	}
 
 	return ret, nil

@@ -1,4 +1,4 @@
-package ie2awsrdslib
+package ie2aws
 
 import (
 	"context"
