@@ -1,0 +1,12 @@
+package ie2datatypes
+
+type AgenticFileMetaData struct {
+	Abstract    string   `json:"abstract"`
+	AIModel     string   `json:"aimodel"`
+	Authors     []string `json:"authors"`
+	CreatedOn   string   `json:"createdon"`
+	Keywords    []string `json:"keywords"`
+	Provider    string   `json:"provider"`
+	PublishDate string   `json:"publishdate"`
+	Title       string   `json:"title"`
+}
