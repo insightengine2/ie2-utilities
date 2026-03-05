@@ -40,5 +40,6 @@ type FileMetaData struct {
 	OGFileName    string         `json:"ogfilename"`
 	ResearchAreas []ResearchArea `json:"researchareas"`
 	Synopsis      string         `json:"synopsis"`
+	Title         string         `json:"title"`
 	UploadedOn    string         `json:"uploadedon"`
 }
